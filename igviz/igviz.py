@@ -212,6 +212,7 @@ class PlotGraph:
             hovertext=[],
             hoverinfo="text",
             textposition=node_label_position,
+            markersymbol="square",
             marker=dict(
                 showscale=True,
                 colorscale=colorscale,
@@ -230,7 +231,7 @@ class PlotGraph:
         )
 
         for node in self.G.nodes():
-            text = f"Node: {node}<br>Degree: {self.G.degree(node)}"
+            text = f"part: {node}"
             x, y = self.G.nodes[node]["pos"]
 
             node_trace["x"] += (x,)
@@ -240,7 +241,7 @@ class PlotGraph:
                 node_trace["text"] += (self.G.nodes[node][node_label],)
             if node_text:
                 for prop in node_text:
-                    text += f"<br></br>{prop}: {self.G.nodes[node][prop]}"
+                    text += f"<br>{prop}: {self.G.nodes[node][prop]}"
             node_trace["hovertext"] += (text.strip(),)
 
             if isinstance(size_method, list):
@@ -316,6 +317,7 @@ class PlotGraph:
             hoverinfo="text",
             textposition=edge_label_position,
             marker=dict(opacity=0),
+            hoverlabel=dict(bgcolor="white")
         )
 
         for edge in self.G.edges(data=True):
@@ -343,7 +345,7 @@ class PlotGraph:
 
         if edge_text:
             edge_text_list = [
-                "\n".join(f"{k}: {v}" for k, v in vals.items())
+                "<br>".join(f"{k}: {v}" for k, v in vals.items())
                 for _, vals in edge_properties.items()
             ]
 
@@ -382,25 +384,25 @@ class PlotGraph:
             )
         ]
 
-        if isinstance(self.G, (nx.DiGraph, nx.MultiDiGraph)):
-            annotations.extend(
-                dict(
-                    ax=self.G.nodes[edge[0]]["pos"][0],
-                    ay=self.G.nodes[edge[0]]["pos"][1],
-                    axref="x",
-                    ayref="y",
-                    x=self.G.nodes[edge[1]]["pos"][0] * 0.85
-                    + self.G.nodes[edge[0]]["pos"][0] * 0.15,
-                    y=self.G.nodes[edge[1]]["pos"][1] * 0.85
-                    + self.G.nodes[edge[0]]["pos"][1] * 0.15,
-                    xref="x",
-                    yref="y",
-                    showarrow=True,
-                    arrowhead=1,
-                    arrowsize=arrow_size,
-                )
-                for edge in self.G.edges()
-            )
+#         if isinstance(self.G, (nx.DiGraph, nx.MultiDiGraph)):
+#             annotations.extend(
+#                 dict(
+#                     ax=self.G.nodes[edge[0]]["pos"][0],
+#                     ay=self.G.nodes[edge[0]]["pos"][1],
+#                     axref="x",
+#                     ayref="y",
+#                     x=self.G.nodes[edge[1]]["pos"][0] * 0.85
+#                     + self.G.nodes[edge[0]]["pos"][0] * 0.15,
+#                     y=self.G.nodes[edge[1]]["pos"][1] * 0.85
+#                     + self.G.nodes[edge[0]]["pos"][1] * 0.15,
+#                     xref="x",
+#                     yref="y",
+#                     showarrow=True,
+#                     arrowhead=1,
+#                     arrowsize=arrow_size,
+#                 )
+#                 for edge in self.G.edges()
+#             )
 
         self.f = go.FigureWidget(
             data=[edge_trace, node_trace, middle_node_trace],
@@ -474,8 +476,13 @@ class PlotGraph:
 
         node = self.inverse_pos_dict[(points.xs[0], points.ys[0])]
 
-        neighbours = list(self.G.neighbors(node))
-
+        # to add : parameter to hover ancestors only, descendents only or both or direct neighbours
+        upper_neighbours = list(nx.ancestors(self.G, node))
+        upper_neighbours = list(nx.ancestors(nx.dfs_tree(self.G, node).reverse(), node))
+        direct_neighbours = list(self.G.neighbors(node))
+        
+        neighbours = list(set(upper_neighbours + lower_neighbours))
+        
         node_colours = list(trace.marker.color)
 
         new_colors = ["#E4E4E4"] * len(node_colours)
